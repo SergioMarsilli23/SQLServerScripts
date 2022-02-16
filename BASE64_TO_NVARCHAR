@@ -1,0 +1,19 @@
+-- REQUIERES FROM_UTF8 FUNCTION
+
+CREATE FUNCTION [dbo].[STR_FROM_BASE64]
+(
+    @BASE64_STRING VARCHAR(MAX)
+)
+RETURNS NVARCHAR(MAX)
+AS
+BEGIN
+    RETURN (
+        [dbo].[FROM_UTF8](
+            CAST(
+                CAST(N'' AS XML).value('xs:base64Binary(sql:variable("@BASE64_STRING"))', 'VARBINARY(MAX)') 
+                AS VARBINARY(MAX)
+            )
+        )
+    )
+END
+GO

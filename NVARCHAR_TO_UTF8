@@ -1,0 +1,36 @@
+-- TAKEN FROM https://gist.github.com/sevaa (thanks)
+
+create function [dbo].[TO_UTF8](@s nvarchar(max))
+returns varbinary(max)
+as
+begin
+    declare @i int = 1, @n int = datalength(@s)/2, @r varbinary(max) = 0x, @c int, @c2 int, @d varbinary(4)
+    while @i <= @n
+    begin
+        set @c = unicode(substring(@s, @i, 1))
+        if (@c & 0xFC00) = 0xD800
+        begin
+            set @i += 1
+            if @i > @n
+                return cast(cast('Malformed UTF-16 - two nchar sequence cut short' as int) as varbinary)
+            set @c2 = unicode(substring(@s, @i, 1))
+            if (@c2 & 0xFC00) <> 0xDC00
+                return cast(cast('Malformed UTF-16 - continuation missing in a two nchar sequence' as int) as varbinary)
+            set @c = (((@c & 0x3FF) * 0x400) | (@c2 & 0x3FF)) + 0x10000
+        end
+
+        if @c < 0x80
+            set @d = cast(@c as binary(1))
+        if @c >= 0x80 and @c < 0x800 
+            set @d = cast(((@c * 4) & 0xFF00) | (@c & 0x3F) | 0xC080 as binary(2))
+        if @c >= 0x800 and @c < 0x10000
+            set @d = cast(((@c * 0x10) & 0xFF0000) | ((@c * 4) & 0x3F00) | (@c & 0x3F) | 0xe08080 as binary(3))
+        if @c >= 0x10000
+            set @d = cast(((@c * 0x40) & 0xFF000000) | ((@c * 0x10) & 0x3F0000) | ((@c * 4) & 0x3F00) | (@c & 0x3F) | 0xf0808080 as binary(4))
+            
+        set @r += @d
+        set @i += 1
+    end
+    return @r
+end
+GO

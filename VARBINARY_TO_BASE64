@@ -1,0 +1,15 @@
+CREATE FUNCTION [dbo].[BIN_TO_BASE64]
+(
+    @BIN_STRING VARBINARY(MAX)
+)
+RETURNS VARCHAR(MAX)
+AS
+BEGIN
+    RETURN (
+        CAST('' AS XML).value(
+              'xs:base64Binary(xs:hexBinary(sql:variable("@BIN_STRING")))'
+            , 'VARCHAR(MAX)'
+        )
+    )
+END
+GO
